@@ -1,6 +1,5 @@
 import Component from '@ember/component';
 import { getCustomElements } from '../lib/common';
-import { warn } from '@ember/debug';
 import { defer } from 'rsvp';
 import { setupCustomElementFor } from '../index';
 
@@ -26,30 +25,11 @@ export function initialize(instance) {
   for (const type of ['application', 'component', 'route']) {
     const entityNames = instance.__registry__.fallback.resolver.knownForType(type);
     for (const entityName in entityNames) {
-      const parsedName = instance.__registry__.fallback.resolver.parseName(entityName);
-      const moduleName = instance.__registry__.fallback.resolver.findModuleName(parsedName);
-      const _module = instance.__registry__.fallback.resolver._moduleRegistry._entries[moduleName];
-      const code = _module.callback.toString();
-      const { 
-        emberCustomElements = {}
-      } = instance.resolveRegistration('config:environment');
-      // Only evaluate the component module if its code contains our sigil.
-      // This optimization is ignored in testing so that components can be
-      // dynamically created and registered.
-      const shouldEvalModule =
-        emberCustomElements.deoptimizeModuleEval ||
-        /\n\s*"~~EMBER~CUSTOM~ELEMENT~~";\s*\n/.test(code);
-      if (!shouldEvalModule) continue;
-      const componentClass = instance.resolveRegistration(entityName);
-      const customElements = getCustomElements(componentClass);
-      const hasCustomElements = customElements.length;
-      warn(
-        `ember-custom-elements: Custom element expected for \`${entityName}\` but none found.`,
-        hasCustomElements,
-        { id: 'no-custom-elements' }
-      );
-      if (!hasCustomElements) continue;
-      setupCustomElementFor(instance, entityName);
+      const klass = instance.resolveRegistration(entityName);
+      const customElements = getCustomElements(klass);
+      if (customElements.length > 0) {
+        setupCustomElementFor(instance, entityName);
+      }
     }
   }
 
